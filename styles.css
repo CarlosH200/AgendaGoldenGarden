@@ -26,9 +26,9 @@ body {
 }
 
 .logo {
-    width:  90px;
-    height: 90px;
-    object-fit: contain;
+    width:  100px;
+    height: 100px;
+    object-fit: cover;
 }
 
 h1 {
@@ -40,6 +40,7 @@ h1 {
     transform: translateX(-50%);
     margin: 0;
 }
+
 
 /* FORM */
 .form {
@@ -141,4 +142,22 @@ button:hover {
     button {
         font-size: 14px;
     }
+}
+
+/* ESTILOS FILTRO POR MES */
+.titulo-mes {
+    color: #d4af37 !important; /* dorado más real */
+}
+
+.botonEditar {
+    border-color: #007bff !important;
+}
+
+.botonEliminar {
+    border-color: #dc3545 !important;
+}
+
+.fecha-container {
+    color: #d4af37 !important;
+    padding-bottom: 15px;
 }
