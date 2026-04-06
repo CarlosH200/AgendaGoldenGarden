@@ -2,23 +2,51 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Agenda Eventos GOLDEN GARDEN</title>
+<title>Agenda Eventos</title>
 
 <link rel="stylesheet" href="styles.css">
+
+<!-- ICONOS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
 
 <div class="container">
-    <h1>Agenda Eventos GOLDEN GARDEN</h1>
 
-    <input id="id" placeholder="ID Evento">
-    <input id="descripcion" placeholder="Descripción">
-    <input type="date" id="fecha">
+    <!-- HEADER -->
+    <div class="header">
+        <img src="./src/assets/GoldenGardenDarckTheme.png" class="logo" alt="logo">
+        <h1 class="tituloPrincipal">Agenda Eventos Golden Garden</h1>
+    </div>
 
-    <button onclick="guardarEvento()">Guardar Evento</button>
+    <!-- FORM -->
+    <div class="form">
+        <div class="input-group">
+            <i class="fa fa-hashtag"></i>
+            <input id="titulo" placeholder="Título Evento">
+        </div>
 
+        <div class="input-group">
+            <i class="fa fa-align-left"></i>
+            <input id="descripcion" placeholder="Descripción Evento">
+        </div>
+
+        <div class="input-group">
+            <i class="fa fa-calendar"></i>
+            <input type="date" id="fecha">
+        </div>
+
+        <button onclick="guardarEvento()">
+            <i class="fa fa-save"></i> Guardar Evento
+        </button>
+    </div>
+
+    <!-- LISTA -->
     <div id="listaEventos"></div>
+
 </div>
 
 <script type="module" src="app.js"></script>

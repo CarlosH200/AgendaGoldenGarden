@@ -1,6 +1,6 @@
-// 🔴 PEGA TU CONFIG AQUÍ
+// 🔴 CONFIG
 const firebaseConfig = {
-   apiKey: "AIzaSyB9oNtoG6zCG6460eHTFR5HOJbpFOOMpgA",
+  apiKey: "AIzaSyB9oNtoG6zCG6460eHTFR5HOJbpFOOMpgA",
   authDomain: "agenda-eventos-d32e8.firebaseapp.com",
   projectId: "agenda-eventos-d32e8",
 };
@@ -22,7 +22,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const eventosRef = collection(db, "eventos");
 
-// 🧠 AUTO ELIMINAR EVENTOS VENCIDOS
+// 🧠 ELIMINAR EVENTOS VENCIDOS
 async function eliminarVencidos(snapshot) {
     const hoy = new Date().toISOString().split("T")[0];
 
@@ -34,36 +34,49 @@ async function eliminarVencidos(snapshot) {
     });
 }
 
+// 📌 VARIABLE GLOBAL PARA EDICIÓN
+window.docEditando = null;
+
+// 🆕 FORMATEAR MES (AGREGADO)
+function formatearMes(fecha) {
+    const meses = [
+        "ENERO", "FEBRERO", "MARZO", "ABRIL",
+        "MAYO", "JUNIO", "JULIO", "AGOSTO",
+        "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
+    ];
+
+    const año = fecha.substring(0, 4);
+    const mesIndex = parseInt(fecha.substring(5, 7)) - 1;
+
+    return `${año} - ${meses[mesIndex]}`;
+}
+
 // 📌 GUARDAR / EDITAR
 window.guardarEvento = async () => {
-    const id = document.getElementById("id").value;
+    const titulo = document.getElementById("titulo").value;
     const descripcion = document.getElementById("descripcion").value;
     const fecha = document.getElementById("fecha").value;
 
-    if (!id || !descripcion || !fecha) {
+    if (!titulo || !descripcion || !fecha) {
         alert("Completa todos los campos");
         return;
     }
 
-    let existe = null;
-
-    const snapshot = await new Promise(resolve => {
-        onSnapshot(eventosRef, resolve);
-    });
-
-    snapshot.forEach(docu => {
-        if (docu.data().id === id) {
-            existe = docu;
-        }
-    });
-
-    if (existe) {
-        await updateDoc(doc(db, "eventos", existe.id), {
+    if (window.docEditando) {
+        // ✏️ EDITAR
+        await updateDoc(doc(db, "eventos", window.docEditando), {
+            titulo,
             descripcion,
             fecha
         });
+        window.docEditando = null;
     } else {
-        await addDoc(eventosRef, { id, descripcion, fecha });
+        // ➕ NUEVO
+        await addDoc(eventosRef, {
+            titulo,
+            descripcion,
+            fecha
+        });
     }
 
     limpiar();
@@ -76,17 +89,19 @@ window.eliminarEvento = async (docId) => {
 
 // ✏️ EDITAR
 window.editarEvento = (e, docId) => {
-    document.getElementById("id").value = e.id;
+    document.getElementById("titulo").value = e.titulo;
     document.getElementById("descripcion").value = e.descripcion;
     document.getElementById("fecha").value = e.fecha;
+
+    window.docEditando = docId;
 };
 
-// 📊 AGRUPAR POR MES
+// 📊 AGRUPAR POR MES (MODIFICADO SOLO AQUÍ)
 function agrupar(eventos) {
     const grupos = {};
 
     eventos.forEach(e => {
-        const mes = e.fecha.substring(0,7);
+        const mes = formatearMes(e.fecha); // 🔥 cambio aquí
 
         if (!grupos[mes]) grupos[mes] = [];
         grupos[mes].push(e);
@@ -122,7 +137,7 @@ onSnapshot(eventosRef, async snapshot => {
             div.classList.add("evento");
 
             div.innerHTML = `
-                <b>${e.id}</b><br>
+                <b>${e.titulo || e.id}</b><br>
                 ${e.descripcion}<br>
                 ${e.fecha}<br>
                 <div class="actions">
@@ -141,7 +156,7 @@ onSnapshot(eventosRef, async snapshot => {
 
 // 🧹 LIMPIAR
 function limpiar() {
-    document.getElementById("id").value = "";
+    document.getElementById("titulo").value = "";
     document.getElementById("descripcion").value = "";
     document.getElementById("fecha").value = "";
 }
