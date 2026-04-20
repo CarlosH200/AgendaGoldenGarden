@@ -20,14 +20,13 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// 🏢 EMPRESA ACTUAL (ANTES DE USARSE)
+let empresaActual = "golden";
+
 // INIT
-const config = empresasConfig[empresaActual];
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const eventosRef = collection(db, "eventos");
-
-// 🏢 EMPRESA ACTUAL
-let empresaActual = "golden";
 
 // 🔄 CONTROL DEL LISTENER
 let unsubscribe = null;
@@ -47,18 +46,24 @@ async function eliminarVencidos(snapshot) {
 // 📌 VARIABLE GLOBAL PARA EDICIÓN
 window.docEditando = null;
 
-// FUNCION PARA CAMBIAR DE INFORMACION DE EMPRESA O ACTUALIZARLA
+// 🎨 APLICAR TEMA DE EMPRESA
 function aplicarTemaEmpresa() {
   const config = empresasConfig[empresaActual];
+
+  if (!config) return;
 
   // cambiar logo
   const logo = document.querySelector(".logo");
   if (logo) {
     logo.src = config.logo;
   }
-}
-// FIN FUNCION PARA ACTUALIZAR INFORMACION DE EMPRESA
 
+  // cambiar título (opcional)
+  const titulo = document.querySelector(".tituloPrincipal");
+  if (titulo) {
+    titulo.innerText = `Agenda Eventos ${config.nombre}`;
+  }
+}
 
 // 🆕 FORMATEAR MES
 function formatearMes(fecha) {
@@ -76,9 +81,9 @@ function formatearMes(fecha) {
 // 🔄 CAMBIAR EMPRESA
 window.cambiarEmpresa = (empresa) => {
   empresaActual = empresa;
-  cargarEventos();
-  // Funcion para cargar tema de empresa
-  aplicarTemaEmpresa();
+
+  aplicarTemaEmpresa(); // primero UI
+  cargarEventos();      // luego datos
 };
 
 // 📌 GUARDAR / EDITAR
@@ -148,11 +153,9 @@ function cargarEventos() {
   const loader = document.getElementById("loader");
   const lista = document.getElementById("listaEventos");
 
-  // 🔥 mostrar loader
   if (loader) loader.style.display = "block";
   lista.innerHTML = "";
 
-  // ❌ cancelar listener anterior
   if (unsubscribe) unsubscribe();
 
   const q = query(eventosRef, where("empresa", "==", empresaActual));
@@ -207,12 +210,12 @@ function cargarEventos() {
       lista.appendChild(divMes);
     }
 
-    // 🔥 ocultar loader cuando termina
     if (loader) loader.style.display = "none";
   });
 }
 
-// 🚀 INICIALIZAR
+// 🚀 INICIALIZAR (ORDEN CORRECTO)
+aplicarTemaEmpresa();
 cargarEventos();
 
 // 🧹 LIMPIAR
