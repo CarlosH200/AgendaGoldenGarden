@@ -6,6 +6,7 @@ const firebaseConfig = {
 };
 
 // IMPORTS
+import { empresasConfig } from "./empresasConfig.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getFirestore,
@@ -15,12 +16,21 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // INIT
+const config = empresasConfig[empresaActual];
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const eventosRef = collection(db, "eventos");
+
+// 🏢 EMPRESA ACTUAL
+let empresaActual = "golden";
+
+// 🔄 CONTROL DEL LISTENER
+let unsubscribe = null;
 
 // 🧠 ELIMINAR EVENTOS VENCIDOS
 async function eliminarVencidos(snapshot) {
@@ -37,21 +47,24 @@ async function eliminarVencidos(snapshot) {
 // 📌 VARIABLE GLOBAL PARA EDICIÓN
 window.docEditando = null;
 
-// 🆕 FORMATEAR MES (AGREGADO)
+// FUNCION PARA CAMBIAR DE INFORMACION DE EMPRESA O ACTUALIZARLA
+function aplicarTemaEmpresa() {
+  const config = empresasConfig[empresaActual];
+
+  // cambiar logo
+  const logo = document.querySelector(".logo");
+  if (logo) {
+    logo.src = config.logo;
+  }
+}
+// FIN FUNCION PARA ACTUALIZAR INFORMACION DE EMPRESA
+
+
+// 🆕 FORMATEAR MES
 function formatearMes(fecha) {
   const meses = [
-    "ENERO",
-    "FEBRERO",
-    "MARZO",
-    "ABRIL",
-    "MAYO",
-    "JUNIO",
-    "JULIO",
-    "AGOSTO",
-    "SEPTIEMBRE",
-    "OCTUBRE",
-    "NOVIEMBRE",
-    "DICIEMBRE",
+    "ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
+    "JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE",
   ];
 
   const año = fecha.substring(0, 4);
@@ -59,6 +72,14 @@ function formatearMes(fecha) {
 
   return `${año} - ${meses[mesIndex]}`;
 }
+
+// 🔄 CAMBIAR EMPRESA
+window.cambiarEmpresa = (empresa) => {
+  empresaActual = empresa;
+  cargarEventos();
+  // Funcion para cargar tema de empresa
+  aplicarTemaEmpresa();
+};
 
 // 📌 GUARDAR / EDITAR
 window.guardarEvento = async () => {
@@ -77,6 +98,7 @@ window.guardarEvento = async () => {
       titulo,
       descripcion,
       fecha,
+      empresa: empresaActual,
     });
     window.docEditando = null;
   } else {
@@ -85,6 +107,7 @@ window.guardarEvento = async () => {
       titulo,
       descripcion,
       fecha,
+      empresa: empresaActual,
     });
   }
 
@@ -105,12 +128,12 @@ window.editarEvento = (e, docId) => {
   window.docEditando = docId;
 };
 
-// 📊 AGRUPAR POR MES (MODIFICADO SOLO AQUÍ)
+// 📊 AGRUPAR POR MES
 function agrupar(eventos) {
   const grupos = {};
 
   eventos.forEach((e) => {
-    const mes = formatearMes(e.fecha); // 🔥 cambio aquí
+    const mes = formatearMes(e.fecha);
 
     if (!grupos[mes]) grupos[mes] = [];
     grupos[mes].push(e);
@@ -119,55 +142,78 @@ function agrupar(eventos) {
   return grupos;
 }
 
-// 👀 MOSTRAR EN TIEMPO REAL
-onSnapshot(eventosRef, async (snapshot) => {
-  await eliminarVencidos(snapshot);
+// 👀 CARGAR EVENTOS (MULTIEMPRESA + LOADER)
+function cargarEventos() {
 
+  const loader = document.getElementById("loader");
   const lista = document.getElementById("listaEventos");
+
+  // 🔥 mostrar loader
+  if (loader) loader.style.display = "block";
   lista.innerHTML = "";
 
-  const eventos = [];
+  // ❌ cancelar listener anterior
+  if (unsubscribe) unsubscribe();
 
-  snapshot.forEach((docu) => {
-    eventos.push({ ...docu.data(), docId: docu.id });
-  });
+  const q = query(eventosRef, where("empresa", "==", empresaActual));
 
-  const grupos = agrupar(eventos);
+  unsubscribe = onSnapshot(q, async (snapshot) => {
 
-  for (let mes in grupos) {
-    const divMes = document.createElement("div");
-    divMes.classList.add("mes");
+    await eliminarVencidos(snapshot);
 
-    divMes.innerHTML = `<h3 class="titulo-mes">${mes}</h3>`;
+    lista.innerHTML = "";
 
-    grupos[mes].forEach((e) => {
-      const div = document.createElement("div");
-      div.classList.add("evento");
+    const eventos = [];
 
-      div.innerHTML = `
-    <b><i class="fa fa-calendar"></i> ${e.titulo || e.id}</b><br>
-    <i class="fa fa-align-left"></i> ${e.descripcion}<br>
-    <div class="fecha-container">
-  <i class="fa fa-clock"></i> <span class="fechaStyledesing">${e.fecha}</span>
-</div>
-
-    <div class="actions">
-        <button class="botonEditar" onclick='editarEvento(${JSON.stringify(e)}, "${e.docId}")'>
-            <i class="fa fa-pen"></i> Editar
-        </button>
-
-        <button class="botonEliminar" onclick='eliminarEvento("${e.docId}")'>
-            <i class="fa fa-trash"></i> Eliminar
-        </button>
-    </div>
-`;
-
-      divMes.appendChild(div);
+    snapshot.forEach((docu) => {
+      eventos.push({ ...docu.data(), docId: docu.id });
     });
 
-    lista.appendChild(divMes);
-  }
-});
+    const grupos = agrupar(eventos);
+
+    for (let mes in grupos) {
+      const divMes = document.createElement("div");
+      divMes.classList.add("mes");
+
+      divMes.innerHTML = `<h3 class="titulo-mes">${mes}</h3>`;
+
+      grupos[mes].forEach((e) => {
+        const div = document.createElement("div");
+        div.classList.add("evento");
+
+        div.innerHTML = `
+          <b><i class="fa fa-calendar"></i> ${e.titulo || e.id}</b><br>
+          <i class="fa fa-align-left"></i> ${e.descripcion}<br>
+
+          <div class="fecha-container">
+            <i class="fa fa-clock"></i> 
+            <span class="fechaStyledesing">${e.fecha}</span>
+          </div>
+
+          <div class="actions">
+            <button class="botonEditar" onclick='editarEvento(${JSON.stringify(e)}, "${e.docId}")'>
+              <i class="fa fa-pen"></i> Editar
+            </button>
+
+            <button class="botonEliminar" onclick='eliminarEvento("${e.docId}")'>
+              <i class="fa fa-trash"></i> Eliminar
+            </button>
+          </div>
+        `;
+
+        divMes.appendChild(div);
+      });
+
+      lista.appendChild(divMes);
+    }
+
+    // 🔥 ocultar loader cuando termina
+    if (loader) loader.style.display = "none";
+  });
+}
+
+// 🚀 INICIALIZAR
+cargarEventos();
 
 // 🧹 LIMPIAR
 function limpiar() {
