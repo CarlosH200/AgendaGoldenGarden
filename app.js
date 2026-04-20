@@ -218,7 +218,7 @@ function cargarEventos() {
 aplicarTemaEmpresa();
 cargarEventos();
 
-// 🧹 LIMPIAR
+//LIMPIAR CAMPOS
 function limpiar() {
   document.getElementById("titulo").value = "";
   document.getElementById("descripcion").value = "";
