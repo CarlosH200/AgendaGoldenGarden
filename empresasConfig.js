@@ -6,7 +6,7 @@ export const empresasConfig = {
   },
   party: {
     nombre: "Hora de Fiesta",
-    logo: "./src/assets/logoHoraDeFiesta.png",
+    logo: "./src/assets/HoradeFiesta.png",
     color: "#dc3545"
   }
 };

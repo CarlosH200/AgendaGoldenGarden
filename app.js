@@ -1,4 +1,4 @@
-// 🔴 CONFIG
+// CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyB9oNtoG6zCG6460eHTFR5HOJbpFOOMpgA",
   authDomain: "agenda-eventos-d32e8.firebaseapp.com",
@@ -20,7 +20,7 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🏢 EMPRESA ACTUAL (ANTES DE USARSE)
+//EMPRESA ACTUAL (ANTES DE USARSE)
 let empresaActual = "golden";
 
 // INIT
@@ -28,10 +28,10 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const eventosRef = collection(db, "eventos");
 
-// 🔄 CONTROL DEL LISTENER
+// CONTROL DEL LISTENER
 let unsubscribe = null;
 
-// 🧠 ELIMINAR EVENTOS VENCIDOS
+// ELIMINAR EVENTOS VENCIDOS
 async function eliminarVencidos(snapshot) {
   const hoy = new Date().toISOString().split("T")[0];
 
@@ -43,10 +43,10 @@ async function eliminarVencidos(snapshot) {
   });
 }
 
-// 📌 VARIABLE GLOBAL PARA EDICIÓN
+// VARIABLE GLOBAL PARA EDICIÓN
 window.docEditando = null;
 
-// 🎨 APLICAR TEMA DE EMPRESA
+// APLICAR TEMA DE EMPRESA
 function aplicarTemaEmpresa() {
   const config = empresasConfig[empresaActual];
 
@@ -65,7 +65,7 @@ function aplicarTemaEmpresa() {
   }
 }
 
-// 🆕 FORMATEAR MES
+//FORMATEAR MES
 function formatearMes(fecha) {
   const meses = [
     "ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
@@ -78,7 +78,7 @@ function formatearMes(fecha) {
   return `${año} - ${meses[mesIndex]}`;
 }
 
-// 🔄 CAMBIAR EMPRESA
+//CAMBIAR EMPRESA
 window.cambiarEmpresa = (empresa) => {
   empresaActual = empresa;
 
@@ -86,7 +86,7 @@ window.cambiarEmpresa = (empresa) => {
   cargarEventos();      // luego datos
 };
 
-// 📌 GUARDAR / EDITAR
+//GUARDAR / EDITAR
 window.guardarEvento = async () => {
   const titulo = document.getElementById("titulo").value;
   const descripcion = document.getElementById("descripcion").value;
@@ -98,7 +98,7 @@ window.guardarEvento = async () => {
   }
 
   if (window.docEditando) {
-    // ✏️ EDITAR
+    //EDITAR
     await updateDoc(doc(db, "eventos", window.docEditando), {
       titulo,
       descripcion,
@@ -107,7 +107,7 @@ window.guardarEvento = async () => {
     });
     window.docEditando = null;
   } else {
-    // ➕ NUEVO
+    //NUEVO
     await addDoc(eventosRef, {
       titulo,
       descripcion,
@@ -119,7 +119,7 @@ window.guardarEvento = async () => {
   limpiar();
 };
 
-// 🗑️ ELIMINAR
+//ELIMINAR
 window.eliminarEvento = async (docId) => {
   await deleteDoc(doc(db, "eventos", docId));
 };
@@ -133,7 +133,7 @@ window.editarEvento = (e, docId) => {
   window.docEditando = docId;
 };
 
-// 📊 AGRUPAR POR MES
+//AGRUPAR POR MES
 function agrupar(eventos) {
   const grupos = {};
 
@@ -147,7 +147,7 @@ function agrupar(eventos) {
   return grupos;
 }
 
-// 👀 CARGAR EVENTOS (MULTIEMPRESA + LOADER)
+//CARGAR EVENTOS (MULTIEMPRESA + LOADER)
 function cargarEventos() {
 
   const loader = document.getElementById("loader");
@@ -214,7 +214,7 @@ function cargarEventos() {
   });
 }
 
-// 🚀 INICIALIZAR (ORDEN CORRECTO)
+//INICIALIZAR (ORDEN CORRECTO)
 aplicarTemaEmpresa();
 cargarEventos();
 
