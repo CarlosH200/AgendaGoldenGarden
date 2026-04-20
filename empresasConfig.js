@@ -2,11 +2,15 @@ export const empresasConfig = {
   golden: {
     nombre: "Golden Garden",
     logo: "./src/assets/GoldenGardenDarckTheme.png",
-    color: "#d4af37"
+    colorBackground: "#0b0b0c",
+    colorBackgroundSecondary: "#151515",
+    colorText: "#e5e5e5"
   },
   party: {
     nombre: "Hora de Fiesta",
     logo: "./src/assets/HoradeFiesta.png",
-    color: "#dc3545"
+    colorBackground: "#ffffff",
+    colorBackgroundSecondary: "#ebebeb",
+    colorText: "#000000"
   }
 };

@@ -20,8 +20,8 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-//EMPRESA ACTUAL (ANTES DE USARSE)
-let empresaActual = "golden";
+// 🏢 EMPRESA ACTUAL (PERSISTENTE)
+let empresaActual = localStorage.getItem("empresa") || "golden";
 
 // INIT
 const app = initializeApp(firebaseConfig);
@@ -46,26 +46,43 @@ async function eliminarVencidos(snapshot) {
 // VARIABLE GLOBAL PARA EDICIÓN
 window.docEditando = null;
 
-// APLICAR TEMA DE EMPRESA
+// 🎨 APLICAR TEMA DE EMPRESA
 function aplicarTemaEmpresa() {
   const config = empresasConfig[empresaActual];
-
   if (!config) return;
 
-  // cambiar logo
+  // logo
   const logo = document.querySelector(".logo");
-  if (logo) {
-    logo.src = config.logo;
+  if (logo) logo.src = config.logo;
+
+  // título
+  const titulo = document.querySelector(".tituloPrincipal");
+  if (titulo) titulo.innerText = `Agenda Eventos ${config.nombre}`;
+
+  // variables CSS
+  if (config.colorBackground) {
+    document.documentElement.style.setProperty(
+      "--color-background",
+      config.colorBackground
+    );
   }
 
-  // cambiar título (opcional)
-  const titulo = document.querySelector(".tituloPrincipal");
-  if (titulo) {
-    titulo.innerText = `Agenda Eventos ${config.nombre}`;
+  if (config.colorBackgroundSecondary) {
+    document.documentElement.style.setProperty(
+      "--color-background-secondary",
+      config.colorBackgroundSecondary
+    );
+  }
+
+  if (config.colorText) {
+    document.documentElement.style.setProperty(
+      "--color-text",
+      config.colorText
+    );
   }
 }
 
-//FORMATEAR MES
+// FORMATEAR MES
 function formatearMes(fecha) {
   const meses = [
     "ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
@@ -78,15 +95,18 @@ function formatearMes(fecha) {
   return `${año} - ${meses[mesIndex]}`;
 }
 
-//CAMBIAR EMPRESA
+// CAMBIAR EMPRESA
 window.cambiarEmpresa = (empresa) => {
   empresaActual = empresa;
 
-  aplicarTemaEmpresa(); // primero UI
-  cargarEventos();      // luego datos
+  // 💾 guardar selección
+  localStorage.setItem("empresa", empresa);
+
+  aplicarTemaEmpresa();
+  cargarEventos();
 };
 
-//GUARDAR / EDITAR
+// GUARDAR / EDITAR
 window.guardarEvento = async () => {
   const titulo = document.getElementById("titulo").value;
   const descripcion = document.getElementById("descripcion").value;
@@ -98,7 +118,6 @@ window.guardarEvento = async () => {
   }
 
   if (window.docEditando) {
-    //EDITAR
     await updateDoc(doc(db, "eventos", window.docEditando), {
       titulo,
       descripcion,
@@ -107,7 +126,6 @@ window.guardarEvento = async () => {
     });
     window.docEditando = null;
   } else {
-    //NUEVO
     await addDoc(eventosRef, {
       titulo,
       descripcion,
@@ -119,12 +137,12 @@ window.guardarEvento = async () => {
   limpiar();
 };
 
-//ELIMINAR
+// ELIMINAR
 window.eliminarEvento = async (docId) => {
   await deleteDoc(doc(db, "eventos", docId));
 };
 
-// ✏️ EDITAR
+// EDITAR
 window.editarEvento = (e, docId) => {
   document.getElementById("titulo").value = e.titulo;
   document.getElementById("descripcion").value = e.descripcion;
@@ -133,13 +151,12 @@ window.editarEvento = (e, docId) => {
   window.docEditando = docId;
 };
 
-//AGRUPAR POR MES
+// AGRUPAR
 function agrupar(eventos) {
   const grupos = {};
 
   eventos.forEach((e) => {
     const mes = formatearMes(e.fecha);
-
     if (!grupos[mes]) grupos[mes] = [];
     grupos[mes].push(e);
   });
@@ -147,9 +164,8 @@ function agrupar(eventos) {
   return grupos;
 }
 
-//CARGAR EVENTOS (MULTIEMPRESA + LOADER)
+// CARGAR EVENTOS
 function cargarEventos() {
-
   const loader = document.getElementById("loader");
   const lista = document.getElementById("listaEventos");
 
@@ -163,7 +179,6 @@ function cargarEventos() {
   unsubscribe = onSnapshot(q, async (snapshot) => {
 
     await eliminarVencidos(snapshot);
-
     lista.innerHTML = "";
 
     const eventos = [];
@@ -214,11 +229,21 @@ function cargarEventos() {
   });
 }
 
-//INICIALIZAR (ORDEN CORRECTO)
+// 🚀 INICIALIZAR CORRECTAMENTE
+
+// sincronizar selector
+const selectEmpresa = document.querySelector(".empresaSelect");
+if (selectEmpresa) {
+  selectEmpresa.value = empresaActual;
+}
+
+// aplicar tema primero
 aplicarTemaEmpresa();
+
+// luego datos
 cargarEventos();
 
-//LIMPIAR CAMPOS
+// LIMPIAR
 function limpiar() {
   document.getElementById("titulo").value = "";
   document.getElementById("descripcion").value = "";
