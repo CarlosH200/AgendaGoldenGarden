@@ -17,10 +17,10 @@ import {
   doc,
   updateDoc,
   query,
-  where
+  where,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🏢 EMPRESA ACTUAL (PERSISTENTE)
+// EMPRESA
 let empresaActual = localStorage.getItem("empresa") || "golden";
 
 // INIT
@@ -28,10 +28,140 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const eventosRef = collection(db, "eventos");
 
-// CONTROL DEL LISTENER
+// LISTENER
 let unsubscribe = null;
 
-// ELIMINAR EVENTOS VENCIDOS
+// CACHE EVENTOS
+let eventosCache = [];
+
+// CALENDARIO
+let fechaActual = new Date();
+
+/* ========================= */
+/* 🔄 FUNCIONES CALENDARIO */
+/* ========================= */
+
+window.mostrarCalendario = () => {
+  document.getElementById("calendarioVista").style.display = "block";
+  document.getElementById("listaEventos").style.display = "none";
+  renderCalendario();
+};
+
+window.mostrarLista = () => {
+  document.getElementById("calendarioVista").style.display = "none";
+  document.getElementById("listaEventos").style.display = "block";
+};
+
+window.cambiarMes = (valor) => {
+  fechaActual.setMonth(fechaActual.getMonth() + valor);
+  renderCalendario();
+};
+
+function renderCalendario() {
+  const grid = document.getElementById("calGrid");
+  const mesLabel = document.getElementById("mesActual");
+
+  if (!grid || !mesLabel) return;
+
+  const year = fechaActual.getFullYear();
+  const mes = fechaActual.getMonth();
+
+  const diasMes = new Date(year, mes + 1, 0).getDate();
+
+  mesLabel.innerText = fechaActual.toLocaleDateString("es-ES", {
+    month: "long",
+    year: "numeric",
+  });
+
+  grid.innerHTML = "";
+
+  const diasSemana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+  diasSemana.forEach((dia) => {
+    grid.innerHTML += `<div class="cal-dia-header">${dia}</div>`;
+  });
+
+  let primerDia = new Date(year, mes, 1).getDay();
+  primerDia = primerDia === 0 ? 6 : primerDia - 1;
+
+  for (let i = 0; i < primerDia; i++) {
+    grid.innerHTML += `<div></div>`;
+  }
+
+  for (let d = 1; d <= diasMes; d++) {
+    const fechaStr = `${year}-${String(mes + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+    const eventosDia = eventosCache.filter((e) => e.fecha === fechaStr);
+
+    const hoy = new Date();
+    const esHoy =
+      d === hoy.getDate() &&
+      mes === hoy.getMonth() &&
+      year === hoy.getFullYear();
+
+    let htmlEventos = eventosDia
+      .map(() => `<div class="cal-dot"></div>`)
+      .join("");
+
+    grid.innerHTML += `
+      <div class="cal-dia ${esHoy ? "cal-hoy" : ""}" onclick='abrirEventosDia("${fechaStr}")'>
+        <span>${d}</span>
+        ${htmlEventos}
+      </div>
+    `;
+  }
+}
+
+/* ========================= */
+/* 🔥 MODAL DETALLE EVENTOS */
+/* ========================= */
+
+window.abrirEventosDia = (fecha) => {
+  const overlay = document.getElementById("detalleOverlay");
+  const cont = document.getElementById("detalleContenido");
+
+  if (!overlay || !cont) return;
+
+  const eventos = eventosCache.filter((e) => e.fecha === fecha);
+
+  if (eventos.length === 0) {
+    cont.innerHTML = `<div class="detalle-vacio">No hay eventos</div>`;
+  } else {
+    cont.innerHTML = eventos
+      .map(
+        (e) => `
+  <div class="detalle-card">
+      <div class="detalle-titulo">${e.titulo}</div>
+      <div class="detalle-desc">${e.descripcion}</div>
+      <div class="detalle-fecha">
+          <i class="fa fa-calendar"></i> ${e.fecha}
+      </div>
+  </div>
+`,
+      )
+      .join("");
+  }
+
+  overlay.style.display = "flex";
+};
+
+window.cerrarDetalle = () => {
+  const overlay = document.getElementById("detalleOverlay");
+  if (overlay) overlay.style.display = "none";
+};
+
+document.addEventListener("click", (e) => {
+  const overlay = document.getElementById("detalleOverlay");
+  if (e.target === overlay) {
+    cerrarDetalle();
+  }
+});
+
+/* ========================= */
+/* 🔥 TU LÓGICA ORIGINAL */
+/* ========================= */
+
+// ELIMINAR VENCIDOS
 async function eliminarVencidos(snapshot) {
   const hoy = new Date().toISOString().split("T")[0];
 
@@ -43,41 +173,38 @@ async function eliminarVencidos(snapshot) {
   });
 }
 
-// VARIABLE GLOBAL PARA EDICIÓN
+// EDICIÓN
 window.docEditando = null;
 
-// 🎨 APLICAR TEMA DE EMPRESA
+// TEMA
 function aplicarTemaEmpresa() {
   const config = empresasConfig[empresaActual];
   if (!config) return;
 
-  // logo
   const logo = document.querySelector(".logo");
   if (logo) logo.src = config.logo;
 
-  // título
   const titulo = document.querySelector(".tituloPrincipal");
   if (titulo) titulo.innerText = `Agenda Eventos ${config.nombre}`;
 
-  // variables CSS
   if (config.colorBackground) {
     document.documentElement.style.setProperty(
       "--color-background",
-      config.colorBackground
+      config.colorBackground,
     );
   }
 
   if (config.colorBackgroundSecondary) {
     document.documentElement.style.setProperty(
       "--color-background-secondary",
-      config.colorBackgroundSecondary
+      config.colorBackgroundSecondary,
     );
   }
 
   if (config.colorText) {
     document.documentElement.style.setProperty(
       "--color-text",
-      config.colorText
+      config.colorText,
     );
   }
 }
@@ -85,8 +212,18 @@ function aplicarTemaEmpresa() {
 // FORMATEAR MES
 function formatearMes(fecha) {
   const meses = [
-    "ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
-    "JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE",
+    "ENERO",
+    "FEBRERO",
+    "MARZO",
+    "ABRIL",
+    "MAYO",
+    "JUNIO",
+    "JULIO",
+    "AGOSTO",
+    "SEPTIEMBRE",
+    "OCTUBRE",
+    "NOVIEMBRE",
+    "DICIEMBRE",
   ];
 
   const año = fecha.substring(0, 4);
@@ -98,15 +235,12 @@ function formatearMes(fecha) {
 // CAMBIAR EMPRESA
 window.cambiarEmpresa = (empresa) => {
   empresaActual = empresa;
-
-  // 💾 guardar selección
   localStorage.setItem("empresa", empresa);
-
   aplicarTemaEmpresa();
   cargarEventos();
 };
 
-// GUARDAR / EDITAR
+// GUARDAR
 window.guardarEvento = async () => {
   const titulo = document.getElementById("titulo").value;
   const descripcion = document.getElementById("descripcion").value;
@@ -177,7 +311,6 @@ function cargarEventos() {
   const q = query(eventosRef, where("empresa", "==", empresaActual));
 
   unsubscribe = onSnapshot(q, async (snapshot) => {
-
     await eliminarVencidos(snapshot);
     lista.innerHTML = "";
 
@@ -186,6 +319,8 @@ function cargarEventos() {
     snapshot.forEach((docu) => {
       eventos.push({ ...docu.data(), docId: docu.id });
     });
+
+    eventosCache = eventos;
 
     const grupos = agrupar(eventos);
 
@@ -200,12 +335,12 @@ function cargarEventos() {
         div.classList.add("evento");
 
         div.innerHTML = `
-          <b><i class="fa fa-calendar"></i> ${e.titulo || e.id}</b><br>
+          <b><i class="fa fa-calendar"></i> ${e.titulo}</b><br>
           <i class="fa fa-align-left"></i> ${e.descripcion}<br>
 
           <div class="fecha-container">
             <i class="fa fa-clock"></i> 
-            <span class="fechaStyledesing">${e.fecha}</span>
+            <span>${e.fecha}</span>
           </div>
 
           <div class="actions">
@@ -226,21 +361,18 @@ function cargarEventos() {
     }
 
     if (loader) loader.style.display = "none";
+
+    if (document.getElementById("calendarioVista")?.style.display !== "none") {
+      renderCalendario();
+    }
   });
 }
 
-// 🚀 INICIALIZAR CORRECTAMENTE
-
-// sincronizar selector
+// INIT
 const selectEmpresa = document.querySelector(".empresaSelect");
-if (selectEmpresa) {
-  selectEmpresa.value = empresaActual;
-}
+if (selectEmpresa) selectEmpresa.value = empresaActual;
 
-// aplicar tema primero
 aplicarTemaEmpresa();
-
-// luego datos
 cargarEventos();
 
 // LIMPIAR
